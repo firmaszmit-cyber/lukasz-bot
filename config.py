@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
+ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "0"))
 
 GMAIL_USER = os.getenv("GMAIL_USER", "firmaszmit@gmail.com")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")

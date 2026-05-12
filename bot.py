@@ -2,7 +2,7 @@ import logging
 
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
-from config import TELEGRAM_TOKEN
+from config import ALLOWED_USER_ID, TELEGRAM_TOKEN
 from handlers import handle_callback, handle_photo, handle_text, handle_voice, start_command
 
 logging.basicConfig(
@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    if not TELEGRAM_TOKEN:
+        raise ValueError("TELEGRAM_TOKEN nie jest ustawiony")
+    if not ALLOWED_USER_ID:
+        raise ValueError("ALLOWED_USER_ID nie jest ustawiony")
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_command))
