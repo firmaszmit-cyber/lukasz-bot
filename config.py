@@ -20,13 +20,17 @@ GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 def _write_temp_json(env_var: str, fallback_path: str) -> str:
     raw = os.getenv(env_var)
     if raw:
-        raw = raw.strip()
-        raw += "=" * (-len(raw) % 4)  # napraw padding base64
-        data = json.loads(base64.b64decode(raw).decode())
-        tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
-        json.dump(data, tmp)
-        tmp.flush()
-        return tmp.name
+        try:
+            raw = raw.strip()
+            raw += "=" * (-len(raw) % 4)  # napraw padding base64
+            data = json.loads(base64.b64decode(raw).decode())
+            tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
+            json.dump(data, tmp)
+            tmp.flush()
+            return tmp.name
+        except Exception as e:
+            import logging
+            logging.warning("Nie można załadować %s: %s", env_var, e)
     return fallback_path
 
 GOOGLE_CREDS_PATH = _write_temp_json(
