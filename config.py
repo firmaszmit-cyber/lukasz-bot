@@ -20,6 +20,8 @@ GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 def _write_temp_json(env_var: str, fallback_path: str) -> str:
     raw = os.getenv(env_var)
     if raw:
+        raw = raw.strip()
+        raw += "=" * (-len(raw) % 4)  # napraw padding base64
         data = json.loads(base64.b64decode(raw).decode())
         tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
         json.dump(data, tmp)
