@@ -31,7 +31,10 @@ Rozmawiasz po polsku. Odpowiedzi są krótkie i konkretne.
 5. Stworzyć post na Facebook
 
 ## Wysyłka wyceny mailem — pełny przepływ:
-Gdy użytkownik poprosi o wycenę I podał adres email:
+Gdy użytkownik poprosi o wycenę I podał adres email lub imię klienta:
+1. Jeśli nie ma adresu email — wywołaj `find_email_address` z imieniem/nazwiskiem klienta
+2. Jeśli znalazłeś adres — zapytaj użytkownika czy to ten właściwy przed wysyłką
+Gdy użytkownik potwierdził adres lub podał go ręcznie:
 1. Wywołaj `generate_wycena` → dostaniesz kosztorys tekstowy i linię PLIK_XLSX=/ścieżka/do/pliku.xlsx
 2. Wywołaj `send_email` z:
    - to: adres z zapytania
@@ -117,6 +120,17 @@ TOOLS = [
                 "content": {"type": "string", "description": "Treść notatki w formacie markdown"},
             },
             "required": ["title", "content"],
+        },
+    },
+    {
+        "name": "find_email_address",
+        "description": "Znajdź adres email klienta przeszukując historię skrzynki Gmail",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Imię i/lub nazwisko klienta, np. 'Adam Winiarski'"},
+            },
+            "required": ["name"],
         },
     },
     {

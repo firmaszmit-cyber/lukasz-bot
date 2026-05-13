@@ -26,6 +26,8 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
         return _save_note(**tool_input)
     elif tool_name == "generate_fb_post":
         return _generate_fb_post(**tool_input)
+    elif tool_name == "find_email_address":
+        return _find_email_address(**tool_input)
     else:
         return f"Nieznane narzędzie: {tool_name}"
 
@@ -103,3 +105,12 @@ def _save_note(title: str, content: str) -> str:
 
 def _generate_fb_post(content: str, typ: str) -> str:
     return content
+
+
+def _find_email_address(name: str) -> str:
+    from gmail_helper import search_email_address
+    try:
+        return search_email_address(name)
+    except Exception as e:
+        logger.error("Błąd szukania emaila: %s", e)
+        return f"Błąd szukania emaila: {e}"

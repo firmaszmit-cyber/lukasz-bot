@@ -20,6 +20,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
 
@@ -81,3 +82,51 @@ def send_email(to: str, subject: str, body: str, attachment_path: str = None) ->
     logger.info("Email wysłany do %s | ID: %s", to, result.get("id"))
     attachment_info = f" + załącznik {Path(attachment_path).name}" if attachment_path else ""
     return f"Email wysłany do {to}{attachment_info}"
+
+
+def search_email_address(name: str) -> str:
+    """Szuka adresu email osoby w historii skrzynki Gmail."""
+    import re
+
+    creds = _load_credentials()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    results = service.users().messages().list(
+        userId="me",
+        q=name,
+        maxResults=20,
+    ).execute()
+
+    messages = results.get("messages", [])
+    if not messages:
+        return f"Nie znaleziono wiadomości dla '{name}'."
+
+    candidates: dict[str, str] = {}  # email -> display name
+    name_parts = [p.lower() for p in name.split() if len(p) > 2]
+
+    for msg in messages[:10]:
+        msg_data = service.users().messages().get(
+            userId="me", id=msg["id"], format="metadata",
+            metadataHeaders=["From", "To"],
+        ).execute()
+
+        for header in msg_data.get("payload", {}).get("headers", []):
+            if header["name"] not in ("From", "To"):
+                continue
+            value = header["value"]
+            if GMAIL_USER in value:
+                continue
+            if not any(part in value.lower() for part in name_parts):
+                continue
+            match = re.search(r'[\w.+\-]+@[\w\-]+\.[\w.]+', value)
+            if match:
+                email = match.group(0)
+                display = re.sub(r'<.*?>', '', value).strip().strip('"\'')
+                candidates[email] = display or email
+
+    if not candidates:
+        return f"Nie znaleziono adresu email dla '{name}' w skrzynce."
+
+    lines = [f"{display} <{email}>" if display != email else email
+             for email, display in list(candidates.items())[:5]]
+    return "Znalezione adresy:\n" + "\n".join(lines)
