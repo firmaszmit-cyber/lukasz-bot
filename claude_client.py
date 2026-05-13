@@ -30,11 +30,12 @@ Rozmawiasz po polsku. Odpowiedzi są krótkie i konkretne.
 4. Zapisać notatkę do pliku
 5. Stworzyć post na Facebook
 
-## Wysyłka wyceny mailem — pełny przepływ:
-Gdy użytkownik poprosi o wycenę I podał adres email lub imię klienta:
-1. Jeśli nie ma adresu email — wywołaj `find_email_address` z imieniem/nazwiskiem klienta
-2. Jeśli znalazłeś adres — zapytaj użytkownika czy to ten właściwy przed wysyłką
-Gdy użytkownik potwierdził adres lub podał go ręcznie:
+## Wysyłka maila — pełny przepływ:
+Gdy użytkownik prosi o wysłanie maila (wyceny, wiadomości, czegokolwiek):
+1. Jeśli nie ma adresu email — wywołaj `find_email_address` z imieniem/nazwiskiem
+2. Jeśli `find_email_address` zwróci wyniki — użyj PIERWSZEGO znalezionego adresu
+3. Od razu wywołaj `send_email` — NIE pytaj tekstem o potwierdzenie, przyciski pojawią się automatycznie
+Gdy masz adres email:
 1. Wywołaj `generate_wycena` → dostaniesz kosztorys tekstowy i linię PLIK_XLSX=/ścieżka/do/pliku.xlsx
 2. Wywołaj `send_email` z:
    - to: adres z zapytania
@@ -54,6 +55,27 @@ Jeśli przy wycenie podano termin (np. "do 30 czerwca", "termin: 15.07"), dodatk
 
 Przy wycenie: używaj dokładnych stawek z cennika. Przy zakresach (np. 30–50 zł/m²) podaj oba końce.
 """
+
+# Historia rozmowy per user_id: lista wiadomości {role, content}
+_conversation_history: dict[int, list] = {}
+MAX_HISTORY = 10  # ostatnie 10 wymian
+
+
+def get_history(user_id: int) -> list:
+    return _conversation_history.get(user_id, [])
+
+
+def add_to_history(user_id: int, role: str, content) -> None:
+    history = _conversation_history.setdefault(user_id, [])
+    history.append({"role": role, "content": content})
+    # Zachowaj max MAX_HISTORY par (user+assistant)
+    if len(history) > MAX_HISTORY * 2:
+        _conversation_history[user_id] = history[-(MAX_HISTORY * 2):]
+
+
+def clear_history(user_id: int) -> None:
+    _conversation_history.pop(user_id, None)
+
 
 TOOLS = [
     {
@@ -152,10 +174,10 @@ TOOLS = [
 ]
 
 
-def process_message(user_text: str, image_base64: str = None) -> tuple[str, Optional[dict]]:
+def process_message(user_text: str, image_base64: str = None, user_id: int = 0) -> tuple[str, Optional[dict]]:
     """
-    Uruchamia pętlę agentową. send_email jest przechwytywany — nie wykonuje się
-    automatycznie, wraca jako pending_email do potwierdzenia przez użytkownika.
+    Uruchamia pętlę agentową z historią rozmowy per user_id.
+    send_email jest przechwytywany — wraca jako pending_email do potwierdzenia.
     Zwraca (tekst_odpowiedzi, pending_email_lub_None).
     """
     from tools_executor import execute_tool
@@ -171,7 +193,10 @@ def process_message(user_text: str, image_base64: str = None) -> tuple[str, Opti
     else:
         content = user_text
 
-    messages = [{"role": "user", "content": content}]
+    # Dodaj nową wiadomość do historii
+    add_to_history(user_id, "user", content)
+    messages = get_history(user_id)
+
     final_text = ""
     pending_email = None
 
@@ -204,7 +229,13 @@ def process_message(user_text: str, image_base64: str = None) -> tuple[str, Opti
                 result = execute_tool(tb.name, tb.input)
                 tool_results.append({"type": "tool_result", "tool_use_id": tb.id, "content": result})
 
+        # Nie zapisuj tool calls do historii — tylko finalna odpowiedź
+        messages = list(messages)  # kopia żeby nie modyfikować historii w locie
         messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results})
+
+    # Zapisz finalną odpowiedź asystenta do historii
+    if final_text:
+        add_to_history(user_id, "assistant", final_text)
 
     return final_text or "Gotowe.", pending_email

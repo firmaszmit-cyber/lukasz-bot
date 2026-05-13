@@ -102,7 +102,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def _process_and_reply(update: Update, text: str, image_base64: str = None):
     try:
-        reply, pending_email = process_message(text, image_base64=image_base64)
+        user_id = update.effective_user.id
+        reply, pending_email = process_message(text, image_base64=image_base64, user_id=user_id)
 
         # Wyślij wygenerowany XLSX na Telegram
         from tools_executor import pop_generated_files
