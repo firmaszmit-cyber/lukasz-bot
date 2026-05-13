@@ -59,6 +59,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = transcribe(tmp_path)
         await update.message.reply_text(f"_Usłyszałem:_ {text}", parse_mode="Markdown")
         await _process_and_reply(update, text)
+    except Exception as e:
+        logger.error("Błąd głosówki: %s", e, exc_info=True)
+        await update.message.reply_text(f"❌ Błąd transkrypcji: {e}")
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
