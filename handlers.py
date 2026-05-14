@@ -120,12 +120,26 @@ async def _process_and_reply(update: Update, text: str, image_base64: str = None
             user_id = update.effective_user.id
             PENDING_EMAILS[user_id] = pending_email
             to = pending_email.get("to", "?")
+            subject = pending_email.get("subject", "")
+            body = pending_email.get("body", "")
+            attachment = pending_email.get("attachment_path")
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton("✅ Tak, wyślij", callback_data="email_yes"),
                 InlineKeyboardButton("❌ Anuluj", callback_data="email_no"),
             ]])
-            confirm_text = f"{reply}\n\n📧 Wysłać kosztorys do *{to}*?" if reply else f"📧 Wysłać kosztorys do *{to}*?"
-            await update.message.reply_text(confirm_text, parse_mode="Markdown", reply_markup=keyboard)
+            preview = (
+                f"📧 *Podgląd maila*\n"
+                f"*Do:* {to}\n"
+                f"*Temat:* {subject}\n\n"
+                f"{body}"
+            )
+            if attachment:
+                preview += f"\n\n📎 Załącznik: {Path(attachment).name}"
+            preview += "\n\n─────────────────\nWysłać?"
+            # Telegram limit 4096 znaków
+            if len(preview) > 4096:
+                preview = preview[:4090] + "…"
+            await update.message.reply_text(preview, parse_mode="Markdown", reply_markup=keyboard)
         else:
             if len(reply) <= 4096:
                 await update.message.reply_text(reply)
