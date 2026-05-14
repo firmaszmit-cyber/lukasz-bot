@@ -28,6 +28,8 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
         return _generate_fb_post(**tool_input)
     elif tool_name == "find_email_address":
         return _find_email_address(**tool_input)
+    elif tool_name == "read_emails":
+        return _read_emails(**tool_input)
     else:
         return f"Nieznane narzędzie: {tool_name}"
 
@@ -105,6 +107,15 @@ def _save_note(title: str, content: str) -> str:
 
 def _generate_fb_post(content: str, typ: str) -> str:
     return content
+
+
+def _read_emails(query: str = "", max_results: int = 5) -> str:
+    from gmail_helper import read_emails
+    try:
+        return read_emails(query, max_results)
+    except Exception as e:
+        logger.error("Błąd czytania maili: %s", e)
+        return f"Błąd czytania maili: {e}"
 
 
 def _find_email_address(name: str) -> str:

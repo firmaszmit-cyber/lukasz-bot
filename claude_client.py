@@ -27,8 +27,9 @@ Rozmawiasz po polsku. Odpowiedzi są krótkie i konkretne.
 1. Dodać wydarzenie do kalendarza Google
 2. Wygenerować kosztorys na podstawie cennika
 3. Wysłać email (np. z kosztorysem do klienta)
-4. Zapisać notatkę do pliku
-5. Stworzyć post na Facebook
+4. Przeczytać maile ze skrzynki (od danej osoby, z danym tematem, ostatnie wiadomości)
+5. Zapisać notatkę do pliku
+6. Stworzyć post na Facebook
 
 ## Wysyłka maila — pełny przepływ:
 Gdy użytkownik prosi o wysłanie maila (wyceny, wiadomości, czegokolwiek):
@@ -153,6 +154,24 @@ TOOLS = [
                 "name": {"type": "string", "description": "Imię i/lub nazwisko klienta, np. 'Adam Winiarski'"},
             },
             "required": ["name"],
+        },
+    },
+    {
+        "name": "read_emails",
+        "description": "Pobierz wiadomości email ze skrzynki Gmail (firmaszmit@gmail.com). Użyj gdy użytkownik prosi o 'maila od X', 'sprawdź skrzynkę', 'co napisał Y' itp.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Zapytanie Gmail, np. 'from:adam@example.com', 'Adam Winiarski', 'kosztorys', 'in:inbox'. Domyślnie pobiera skrzynkę odbiorczą.",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Liczba wiadomości do pobrania (domyślnie 5, max 10)",
+                },
+            },
+            "required": [],
         },
     },
     {

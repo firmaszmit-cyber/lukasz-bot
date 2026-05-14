@@ -84,6 +84,59 @@ def send_email(to: str, subject: str, body: str, attachment_path: str = None) ->
     return f"Email wysłany do {to}{attachment_info}"
 
 
+def read_emails(query: str = "", max_results: int = 5) -> str:
+    """Pobiera wiadomości ze skrzynki Gmail pasujące do zapytania."""
+    import base64
+    import re
+
+    creds = _load_credentials()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    results = service.users().messages().list(
+        userId="me",
+        q=query or "in:inbox",
+        maxResults=max_results,
+    ).execute()
+
+    messages = results.get("messages", [])
+    if not messages:
+        return f"Brak wiadomości pasujących do: '{query}'."
+
+    output_parts = []
+    for msg in messages:
+        msg_data = service.users().messages().get(
+            userId="me", id=msg["id"], format="full",
+        ).execute()
+
+        headers = {h["name"]: h["value"] for h in msg_data.get("payload", {}).get("headers", [])}
+        subject = headers.get("Subject", "(brak tematu)")
+        sender = headers.get("From", "(nieznany nadawca)")
+        date_str = headers.get("Date", "")
+
+        body = ""
+        payload = msg_data.get("payload", {})
+        parts = payload.get("parts", [])
+        if parts:
+            for part in parts:
+                if part.get("mimeType") == "text/plain":
+                    data = part.get("body", {}).get("data", "")
+                    if data:
+                        body = base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
+                        break
+        else:
+            data = payload.get("body", {}).get("data", "")
+            if data:
+                body = base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
+
+        body_preview = body.strip()[:500].replace("\r\n", "\n") if body else "(brak treści)"
+
+        output_parts.append(
+            f"Od: {sender}\nData: {date_str}\nTemat: {subject}\n---\n{body_preview}"
+        )
+
+    return "\n\n===\n\n".join(output_parts)
+
+
 def search_email_address(name: str) -> str:
     """Szuka adresu email osoby w historii skrzynki Gmail."""
     import re
